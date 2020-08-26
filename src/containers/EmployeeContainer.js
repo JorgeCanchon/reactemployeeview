@@ -7,12 +7,12 @@ export const EmployeeContainer = () => {
     return (
         <Layout>
             <Header>
-                <h3 style={color='#ffffff'}>Empleados</h3>
+                <h3 style={{color:'#ffffff'}}>Empleados</h3>
             </Header>
-            <Content>
+            <Content style={{margin: '15px'}}>
                 <Employees />
             </Content>
-            <Footer>Footer</Footer>
+            <Footer>Copyright&copy; 2020 - Página creada por Jorge Canchon - Todos los derechos reservados </Footer>
       </Layout>
     );
 }

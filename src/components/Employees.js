@@ -1,40 +1,49 @@
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Spin } from 'antd';
+import React, { useState, Fragment, useEffect } from 'react';
+import { Table, Input, Button, Space, Spin , message, Popconfirm } from 'antd';
 import Highlighter from 'react-highlight-words';
 import { SearchOutlined } from '@ant-design/icons';
-
-const data = [
-  {
-    key: '1',
-    name: 'John Brown',
-    age: 32,
-    address: 'New York No. 1 Lake Park',
-  },
-  {
-    key: '2',
-    name: 'Joe Black',
-    age: 42,
-    address: 'London No. 1 Lake Park',
-  },
-  {
-    key: '3',
-    name: 'Jim Green',
-    age: 32,
-    address: 'Sidney No. 1 Lake Park',
-  },
-  {
-    key: '4',
-    name: 'Jim Red',
-    age: 32,
-    address: 'London No. 2 Lake Park',
-  },
-];
+import { GetEmployees, GetBosses, DeleteEmployee } from '../services/employeeRequest';
+import { useSelector, shallowEqual, useDispatch } from 'react-redux';
+import { setEmployees, setBosses } from '../redux/employee/index';
 
 export const Employees = () => {
 
   const [searchText, setSearchText] = useState('');
   const [searchedColumn, setSearchedColumn] = useState('');
   const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+
+  const { employees } = useSelector(
+    state => ({
+      employees: state.employees.employees
+    }),
+    shallowEqual
+  );
+
+  useEffect(() => {
+    getDataEmployee();
+  }, []);
+
+  const getDataEmployee = async () => {
+    let data = await GetEmployees();
+    if(data.status === 200){
+      data = data.data.map(x => ({ ...x, key: x.idEmployee}));
+      dispatch(setEmployees(data));
+    }else{
+      message.error('Ocurrio un error al consultar los datos');
+    }
+    setLoading(false);
+  }
+
+  const getDataBoss = async () => {
+    let data = await GetBosses();
+    if(data.status === 200){
+      data = data.data.map(x => ({ ...x, key: x.idEmployee}));
+      dispatch(setBosses(data));
+    }else{
+      message.error('Ocurrio un error al consultar los datos');
+    }
+  }
 
   const getColumnSearchProps = dataIndex => ({
     filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
@@ -97,35 +106,65 @@ export const Employees = () => {
     setSearchText('');
   };
 
+  const handleDelete = async key => {
+    let res = await DeleteEmployee(key);
+    if(res === 200){
+      //eliminar dato del store dispatch(setBosses(data));
+      message.success('Empleado eliminado con éxito');
+    }else{
+      message.error('Ocurrio un error al eliminar el empleado');
+    }
+    console.log(key, res);
+  }
+
+  const handleAdd = (key) => {
+    
+    console.log(key);
+  }
+
   const columns = [
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
+      title: 'Id Empleado',
+      dataIndex: 'idEmployee',
+      key: 'idEmployee',
       width: '30%',
-      ...getColumnSearchProps('name'),
     },
     {
-      title: 'Age',
-      dataIndex: 'age',
-      key: 'age',
+      title: 'Nombre Empleado',
+      dataIndex: 'fullName',
+      key: 'idEmployee',
+      width: '30%',
+    },
+    {
+      title: 'Cargo',
+      dataIndex: 'position',
+      key: 'idEmployee',
       width: '20%',
-      ...getColumnSearchProps('age'),
     },
     {
-      title: 'Address',
-      dataIndex: 'address',
-      key: 'address',
-      ...getColumnSearchProps('address'),
-    },
+      title: 'Eliminar',
+      dataIndex: 'Eliminar',
+      render: (text, record) =>
+          employees.length >= 1 ? (
+              <Popconfirm title="¿Esta seguro de eliminar?" onConfirm= { () => handleDelete(record.key)}>
+                <a>Eliminar</a>
+              </Popconfirm> 
+          ) : null,
+    }
   ];
-    if (loading)
-        return(
-        <Fragment>
-            <Spin />
-        </Fragment>);
+  
+  if (loading)
+      return(
+      <Fragment>
+          <Spin />
+      </Fragment>);
   return (
-    <Table columns={columns} dataSource={data} />
+    <Fragment>
+      <Button onClick={handleAdd} type='primary' style ={{marginBottom:16}}>
+        Agregar empleado
+      </Button>
+      <Table columns={columns} dataSource={employees} />
+    </Fragment>
   );
 }
 

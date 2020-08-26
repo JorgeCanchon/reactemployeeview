@@ -2,7 +2,7 @@ import { combineReducers } from 'redux';
 import reducerEmployee  from './employee/index';
 
 export const allReducers = combineReducers({
-    employee: reducerEmployee
+    employees: reducerEmployee
 });
 
 export default allReducers;
