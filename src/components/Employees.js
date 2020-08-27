@@ -1,16 +1,54 @@
 import React, { useState, Fragment, useEffect } from 'react';
-import { Table, Input, Button, Space, Spin , message, Popconfirm } from 'antd';
-import Highlighter from 'react-highlight-words';
-import { SearchOutlined } from '@ant-design/icons';
-import { GetEmployees, GetBosses, DeleteEmployee } from '../services/employeeRequest';
+import { Table, Button, Spin , message, Popconfirm } from 'antd';
+import { GetEmployees, GetBosses, DeleteEmployee, AddEmployee } from '../services/employeeRequest';
 import { useSelector, shallowEqual, useDispatch } from 'react-redux';
-import { setEmployees, setBosses } from '../redux/employee/index';
+import { setEmployees, setBosses, deleteBoss, deleteEmployee, addEmployee } from '../redux/employee/index';
+import MyModal from '../components/Modal';
+import FormEmployee from '../components/FormEmployee';
 
 export const Employees = () => {
 
-  const [searchText, setSearchText] = useState('');
-  const [searchedColumn, setSearchedColumn] = useState('');
+  const columns = [
+    {
+      title: 'Id Empleado',
+      dataIndex: 'idEmployee',
+      width: '10%',
+    },
+    {
+      title: 'Nombre Empleado',
+      dataIndex: 'fullName',
+      width: '20%',
+    },
+    {
+      title: 'Cargo',
+      dataIndex: 'position',
+      width: '20%',
+    },
+    {
+      title: 'Jefe',
+      dataIndex: 'boss',
+      width: '20%',
+    },
+    {
+      title: 'Eliminar',
+      dataIndex: 'Eliminar',
+      render: (text, record) =>
+          employees.length >= 1 ? (
+              <Popconfirm title="¿Esta seguro de eliminar?" onConfirm= { () => handleDelete(record.key)}>
+                <a>Eliminar</a>
+              </Popconfirm> 
+          ) : null,
+    }
+  ];
+
   const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [employeeState, setEmployeeState] = useState([]);
+
+  const onChangeSwitch = e => {
+      setChecked(e);
+  }
   const dispatch = useDispatch();
 
   const { employees } = useSelector(
@@ -26,133 +64,88 @@ export const Employees = () => {
 
   const getDataEmployee = async () => {
     let data = await GetEmployees();
-    if(data.status === 200){
-      data = data.data.map(x => ({ ...x, key: x.idEmployee}));
-      dispatch(setEmployees(data));
-    }else{
-      message.error('Ocurrio un error al consultar los datos');
+    switch(data.status){
+      case 200:
+        data = data.data.map(x => ({ ...x, key: x.idEmployee, 
+          boss: x.isBoss ? 'SI': 'NO'}
+        ));
+        setEmployeeState(data);
+        dispatch(setEmployees(data));
+        break;
+      case 204:
+        message.warning('No se encontraron empleados');
+        break;
+      default:
+        message.error('Ocurrio un error al consultar los datos');
     }
     setLoading(false);
   }
 
   const getDataBoss = async () => {
     let data = await GetBosses();
-    if(data.status === 200){
-      data = data.data.map(x => ({ ...x, key: x.idEmployee}));
-      dispatch(setBosses(data));
-    }else{
-      message.error('Ocurrio un error al consultar los datos');
+    switch(data.status){
+      case 200:
+        data = data.data.map(x => ({ ...x, key: x.idEmployee}));
+        dispatch(setBosses(data));
+        break;
+      case 204:
+        message.warning('No se encontraron jefes');
+        setChecked(true);
+        break;
+      default:
+        message.error('Ocurrio un error al consultar los datos');
     }
   }
 
-  const getColumnSearchProps = dataIndex => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }}>
-        <Input
-          ref={node => {
-            this.searchInput = node;
-          }}
-          placeholder={`Search ${dataIndex}`}
-          value={selectedKeys[0]}
-          onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
-          style={{ width: 188, marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Search
-          </Button>
-          <Button onClick={() => handleReset(clearFilters)} size="small" style={{ width: 90 }}>
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
-    onFilter: (value, record) =>
-      record[dataIndex] ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()) : '',
-    onFilterDropdownVisibleChange: visible => {
-      if (visible) {
-        setTimeout(() => this.searchInput.select());
-      }
-    },
-    render: text =>
-      searchedColumn === dataIndex ? (
-        <Highlighter
-          highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
-          searchWords={[searchText]}
-          autoEscape
-          textToHighlight={text ? text.toString() : ''}
-        />
-      ) : (
-          text
-        ),
-  });
-
-  const handleSearch = (selectedKeys, confirm, dataIndex) => {
-    confirm();
-    setSearchText(selectedKeys[0]);
-    setSearchedColumn(dataIndex);
-  };
-
-  const handleReset = clearFilters => {
-    clearFilters();
-    setSearchText('');
-  };
-
-  const handleDelete = async key => {
+  const handleDelete = async key => {    
     let res = await DeleteEmployee(key);
-    if(res === 200){
-      //eliminar dato del store dispatch(setBosses(data));
+    if(res.status === 200){
       message.success('Empleado eliminado con éxito');
+      let data = employeeState.filter(x => x.idEmployee !== key);
+      setEmployeeState(data);
+      dispatch(deleteEmployee(key));
     }else{
       message.error('Ocurrio un error al eliminar el empleado');
     }
-    console.log(key, res);
   }
 
-  const handleAdd = (key) => {
-    
-    console.log(key);
+  const handleAdd = _ => {
+    getDataBoss();
+    setVisible(true);
   }
 
-  const columns = [
-    {
-      title: 'Id Empleado',
-      dataIndex: 'idEmployee',
-      key: 'idEmployee',
-      width: '30%',
-    },
-    {
-      title: 'Nombre Empleado',
-      dataIndex: 'fullName',
-      key: 'idEmployee',
-      width: '30%',
-    },
-    {
-      title: 'Cargo',
-      dataIndex: 'position',
-      key: 'idEmployee',
-      width: '20%',
-    },
-    {
-      title: 'Eliminar',
-      dataIndex: 'Eliminar',
-      render: (text, record) =>
-          employees.length >= 1 ? (
-              <Popconfirm title="¿Esta seguro de eliminar?" onConfirm= { () => handleDelete(record.key)}>
-                <a>Eliminar</a>
-              </Popconfirm> 
-          ) : null,
+  const handleOk = async e => {
+    let entity = {
+      "FullName": e.fullname,
+      "Position": e.position,
+      "IdBoss": parseInt(e.idboss),
+      "IsBoss": checked
+    };
+    let res = await AddEmployee(entity);
+    switch(res.status){
+      case 200:
+        let data = { 
+          ...res.data, 
+          boss: res.data.isBoss ? 'SI': 'NO',
+          key: res.data.idEmployee
+        };
+        setEmployeeState([...employeeState, data]);
+        dispatch(addEmployee(data));
+        message.success('Empleado agregado con éxito');
+        break;
+      case 201:
+        message.warning(`el empleado ${e.fullname} ya exite`);
+        break;
+        default:
+          message.error('Ocurrio un error al agregar el empleado');
     }
-  ];
-  
+    setVisible(false);
+  }
+
+  const handleCancel = _ => {
+    setVisible(false);
+  };
+
   if (loading)
       return(
       <Fragment>
@@ -163,7 +156,13 @@ export const Employees = () => {
       <Button onClick={handleAdd} type='primary' style ={{marginBottom:16}}>
         Agregar empleado
       </Button>
-      <Table columns={columns} dataSource={employees} />
+      <MyModal 
+        title='Agregar empleado'
+        content={<FormEmployee onFinish={handleOk.bind(this)} checked={checked} onChange={onChangeSwitch} />}
+        visible={visible}
+        handleCancel={handleCancel.bind(this)}
+       />
+      <Table columns={columns} dataSource={employeeState} rowKey="idEmployee" />
     </Fragment>
   );
 }
