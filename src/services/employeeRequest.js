@@ -36,7 +36,7 @@ export const GetBosses = async () => {
 
 export const DeleteEmployee = async id => {
     try{
-        let result = await axios.delete(`constants.ENDPOINTS.EMPLOYEE.DELETE_EMPLOYEE/${id}`);
+        let result = await axios.delete(`${constants.ENDPOINTS.EMPLOYEE.DELETE_EMPLOYEE}/${id}`);
         let data = await result;
         return data;
     }catch(e){
@@ -45,9 +45,9 @@ export const DeleteEmployee = async id => {
     }
 }
 
-export const AddEmployee = async () => {
+export const AddEmployee = async employee => {
     try{
-        let result = await axios.post(constants.ENDPOINTS.EMPLOYEE.ADD_EMPLOYEE, { });
+        let result = await axios.post(constants.ENDPOINTS.EMPLOYEE.ADD_EMPLOYEE, employee);
         let data = await result;
         return data;
     }catch(e){
